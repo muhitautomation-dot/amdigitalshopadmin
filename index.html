@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>AM DIGITAL SHOP · Admin Panel</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+:root {
+  --bg: #f1f5f9; --card: #ffffff; --border: #e5e9f0;
+  --text: #0b1a33; --text-muted: #64748b; --text-soft: #94a3b8;
+  --primary: #2563eb; --primary-soft: #eef4ff; --primary-hover: #1d4ed8;
+  --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
+  --shadow: 0 8px 30px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 14px 40px rgba(15, 23, 42, 0.08);
+}
+body.dark {
+  --bg: #0f172a; --card: #1e293b; --border: #334155;
+  --text: #e2e8f0; --text-muted: #94a3b8; --text-soft: #64748b;
+  --primary-soft: #1e3a5f;
+  --shadow: 0 8px 30px rgba(0,0,0,0.3);
+  --shadow-hover: 0 14px 40px rgba(0,0,0,0.4);
+}
+body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; transition: background 0.3s, color 0.3s; -webkit-font-smoothing: antialiased; }
+
+/* SIDEBAR */
+.sidebar { position: fixed; top: 0; left: 0; height: 100%; width: 280px; background: var(--card); border-right: 1px solid var(--border); padding: 28px 20px; display: flex; flex-direction: column; z-index: 100; transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); overflow-y: auto; }
+.sidebar-brand { display: flex; align-items: center; gap: 14px; margin-bottom: 40px; padding-left: 6px; }
+.sidebar-brand i { font-size: 30px; color: var(--primary); background: var(--primary-soft); padding: 12px; border-radius: 16px; }
+.sidebar-brand span { font-weight: 700; font-size: 20px; letter-spacing: -0.3px; }
+.sidebar-brand small { font-weight: 500; font-size: 12px; color: var(--text-muted); display: block; margin-top: 2px; }
+.nav-section { margin-bottom: 28px; }
+.nav-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--text-soft); margin-bottom: 12px; padding-left: 10px; }
+.nav-item { display: flex; align-items: center; gap: 14px; padding: 12px 16px; border-radius: 14px; cursor: pointer; transition: all 0.2s; color: var(--text-muted); font-weight: 500; font-size: 14px; margin-bottom: 4px; text-decoration: none; border: none; background: transparent; width: 100%; text-align: left; }
+.nav-item i { width: 22px; font-size: 16px; color: var(--text-soft); transition: 0.2s; text-align: center; }
+.nav-item:hover { background: var(--bg); color: var(--text); }
+.nav-item:hover i { color: var(--primary); }
+.nav-item.active { background: var(--primary-soft); color: var(--primary); font-weight: 600; }
+.nav-item.active i { color: var(--primary); }
+.badge-float { margin-left: auto; background: var(--primary); color: white; padding: 2px 10px; border-radius: 40px; font-size: 11px; font-weight: 700; min-width: 24px; text-align: center; }
+.badge-float.zero { background: var(--border); color: var(--text-soft); }
+.sidebar-footer { margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-soft); display: flex; justify-content: space-between; align-items: center; }
+.dark-toggle { background: none; border: none; cursor: pointer; color: var(--text-soft); font-size: 18px; padding: 6px 12px; border-radius: 10px; transition: 0.2s; }
+.dark-toggle:hover { background: var(--bg); color: var(--text); }
+
+/* MAIN */
+.main { margin-left: 280px; padding: 32px 36px; width: calc(100% - 280px); min-height: 100vh; }
+.top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.top-bar h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; }
+.top-bar .stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat-chip { background: var(--card); padding: 10px 18px; border-radius: 40px; border: 1px solid var(--border); font-weight: 500; font-size: 13px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
+.stat-chip i { color: var(--primary); }
+.stat-chip strong { color: var(--text); font-weight: 700; }
+
+.sidebar-toggle { position: fixed; top: 20px; left: 20px; z-index: 110; background: var(--card); border: 1px solid var(--border); width: 48px; height: 48px; border-radius: 14px; display: none; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; color: var(--text); box-shadow: var(--shadow); }
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 99; backdrop-filter: blur(3px); }
+.overlay.show { display: block; }
+
+/* CARDS */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 1100px) { .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
+.card { background: var(--card); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); border: 1px solid var(--border); transition: box-shadow 0.2s; }
+.card:hover { box-shadow: var(--shadow-hover); }
+.card-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.card-title i { color: var(--primary); width: 22px; text-align: center; }
+.input-group { margin-bottom: 16px; }
+.input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+.input-group input, .input-group textarea, .input-group select { width: 100%; padding: 12px 16px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--bg); font-size: 14px; transition: 0.2s; color: var(--text); }
+.input-group input:focus, .input-group textarea:focus, .input-group select:focus { border-color: var(--primary); outline: none; background: var(--card); box-shadow: 0 0 0 4px rgba(37,99,235,0.08); }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.btn { background: var(--primary); color: white; border: none; padding: 12px 24px; border-radius: 40px; font-weight: 600; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.22); }
+.btn:hover { background: var(--primary-hover); transform: scale(0.97); }
+.btn-outline { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); box-shadow: none; }
+.btn-outline:hover { background: var(--primary-soft); }
+.btn-danger { background: var(--danger); box-shadow: 0 4px 12px rgba(239,68,68,0.22); }
+.btn-danger:hover { background: #dc2626; }
+.btn-sm { padding: 8px 14px; font-size: 12px; }
+.btn-success { background: var(--success); box-shadow: 0 4px 12px rgba(34,197,94,0.22); }
+.btn-success:hover { background: #16a34a; }
+.flex { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.badge { background: var(--bg); padding: 4px 12px; border-radius: 40px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+.badge-primary { background: #dbeafe; color: #1d4ed8; }
+.badge-success { background: #dcfce7; color: #16a34a; }
+.badge-warning { background: #fef9c3; color: #ca8a04; }
+.badge-danger { background: #fee2e2; color: #dc2626; }
+body.dark .badge-primary { background: #1e3a5f; color: #93c5fd; }
+body.dark .badge-success { background: #14532d; color: #86efac; }
+body.dark .badge-warning { background: #713f12; color: #fde047; }
+body.dark .badge-danger { background: #7f1d1d; color: #fca5a5; }
+.list-item { background: var(--bg); border-radius: 16px; padding: 14px 18px; margin-bottom: 12px; border-left: 4px solid var(--primary); display: flex; justify-content: space-between; align-items: center; transition: 0.15s; gap: 12px; }
+.list-item:hover { background: var(--primary-soft); }
+.list-item .info { min-width: 0; flex: 1; }
+.list-item .info .title { font-weight: 600; font-size: 14px; display: block; }
+.list-item .info .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; display: block; word-break: break-word; }
+.empty-state { text-align: center; color: var(--text-soft); padding: 40px 10px; font-size: 14px; }
+.empty-state i { font-size: 34px; opacity: 0.35; margin-bottom: 12px; display: block; }
+
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 14px 32px; border-radius: 60px; font-weight: 500; box-shadow: 0 12px 40px rgba(0,0,0,0.25); z-index: 9999; display: none; font-size: 14px; max-width: 90vw; }
+.toast.show { display: block; animation: slideUp 0.3s ease; }
+@keyframes slideUp { from { opacity:0; transform:translateY(20px) translateX(-50%); } to { opacity:1; transform:translateY(0) translateX(-50%); } }
+
+.user-list-item { background: var(--card); border-radius: 16px; padding: 14px 18px; margin-bottom: 10px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; gap: 12px; }
+.user-list-item:hover { border-color: var(--primary); transform: translateX(2px); }
+.user-list-item .info { min-width: 0; flex: 1; }
+.user-list-item .info .name { font-weight: 600; font-size: 14px; display: block; }
+.user-list-item .info .email { font-size: 12px; color: var(--text-muted); display: block; margin-top: 3px; word-break: break-all; }
+.scroll-list { max-height: 500px; overflow-y: auto; padding-right: 4px; }
+.scroll-list::-webkit-scrollbar { width: 6px; }
+.scroll-list::-webkit-scrollbar-track { background: var(--bg); border-radius: 10px; }
+.scroll-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+.tab-content { display: none; animation: fade 0.25s ease; }
+.tab-content.active { display: block; }
+@keyframes fade { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.search-box { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.search-box input, .search-box select { flex: 1; min-width: 180px; padding: 10px 16px; border-radius: 40px; border: 1.5px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text); }
+.search-box input:focus, .search-box select:focus { border-color: var(--primary); outline: none; background: var(--card); }
+.img-preview { width: 60px; height: 60px; border-radius: 12px; object-fit: cover; border: 2px solid var(--border); margin-top: 6px; }
+
+.stat-card { text-align: center; padding: 22px 18px; }
+.stat-card .icon { width: 48px; height: 48px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 12px; }
+.stat-card .number { font-size: 28px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
+.stat-card .label { font-size: 13px; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+.stat-icon-blue { background: #dbeafe; color: #1d4ed8; }
+.stat-icon-green { background: #dcfce7; color: #16a34a; }
+.stat-icon-amber { background: #fef3c7; color: #d97706; }
+.stat-icon-red { background: #fee2e2; color: #dc2626; }
+.stat-icon-purple { background: #ede9fe; color: #7c3aed; }
+.stat-icon-teal { background: #ccfbf1; color: #0d9488; }
+body.dark .stat-icon-blue { background: #1e3a5f; color: #93c5fd; }
+body.dark .stat-icon-green { background: #14532d; color: #86efac; }
+body.dark .stat-icon-amber { background: #713f12; color: #fde047; }
+body.dark .stat-icon-red { background: #7f1d1d; color: #fca5a5; }
+body.dark .stat-icon-purple { background: #4c1d95; color: #c4b5fd; }
+body.dark .stat-icon-teal { background: #134e4a; color: #5eead4; }
+
+.user-detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(5px); z-index: 200; display: none; justify-content: center; align-items: center; padding: 20px; }
+.user-detail-modal.show { display: flex; }
+.user-detail-box { background: var(--card); border-radius: 24px; max-width: 500px; width: 100%; padding: 28px; max-height: 85vh; overflow-y: auto; animation: fade 0.3s ease; color: var(--text); }
+.user-detail-box .close { float: right; background: none; border: none; font-size: 28px; cursor: pointer; color: var(--text-soft); line-height: 1; }
+.user-detail-box .close:hover { color: var(--text); }
+.user-detail-box .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 12px; font-size: 14px; }
+.user-detail-box .detail-row:last-child { border-bottom: none; }
+.user-detail-box .detail-row span { color: var(--text-muted); }
+.user-detail-box .detail-row strong { color: var(--text); word-break: break-all; text-align: right; }
+
+.fab-container { position: fixed; bottom: 32px; right: 32px; z-index: 99; }
+.fab-btn { width: 56px; height: 56px; border-radius: 50%; background: var(--primary); color: white; border: none; box-shadow: 0 8px 24px rgba(37,99,235,0.35); font-size: 22px; cursor: pointer; transition: 0.25s; display: flex; align-items: center; justify-content: center; }
+.fab-btn:hover { transform: scale(0.94) rotate(90deg); background: var(--primary-hover); }
+.export-btn { background: #10b981 !important; box-shadow: 0 4px 12px rgba(16,185,129,0.22) !important; }
+.export-btn:hover { background: #059669 !important; }
+
+/* DEBUG BANNER */
+#debugBanner { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #dc2626; color: white; padding: 10px 16px; font-size: 13px; font-weight: 600; text-align: center; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+#debugBanner.show { display: block; }
+#debugBanner button { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; margin-left: 12px; cursor: pointer; font-weight: 600; }
+
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); width: 280px; }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; width: 100%; padding: 20px; padding-top: 84px; }
+  .top-bar { flex-direction: column; align-items: flex-start; }
+  .top-bar h2 { font-size: 22px; }
+  .top-bar .stats { width: 100%; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .sidebar-toggle { display: flex !important; }
+  .row-2 { grid-template-columns: 1fr; }
+  .fab-container { bottom: 20px; right: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div id="debugBanner">
+  <span id="debugMsg">⚠️ Connection issue</span>
+  <button onclick="document.getElementById('debugBanner').classList.remove('show')">Dismiss</button>
+</div>
+
+<button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+<div class="overlay" id="overlay"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-brand">
+    <i class="fas fa-crown"></i>
+    <div><span>AM DIGITAL SHOP</span><small>Admin Panel</small></div>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Main</div>
+    <button class="nav-item active" data-tab="tabDashboard"><i class="fas fa-chart-pie"></i> Dashboard</button>
+    <button class="nav-item" data-tab="tabProducts"><i class="fas fa-box"></i> Products <span class="badge-float zero" id="productCountBadge">0</span></button>
+    <button class="nav-item" data-tab="tabDeposits"><i class="fas fa-coins"></i> Deposits <span class="badge-float zero" id="depositPendingBadgeNav">0</span></button>
+    <button class="nav-item" data-tab="tabUsers"><i class="fas fa-users"></i> Users <span class="badge-float zero" id="userCountBadgeNav">0</span></button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">Content</div>
+    <button class="nav-item" data-tab="tabSliders"><i class="fas fa-images"></i> Sliders</button>
+    <button class="nav-item" data-tab="tabNotices"><i class="fas fa-bullhorn"></i> Notices</button>
+    <button class="nav-item" data-tab="tabCategories"><i class="fas fa-tags"></i> Categories</button>
+  </div>
+  <div class="nav-section">
+    <div class="nav-label">System</div>
+    <button class="nav-item" data-tab="tabSettings"><i class="fas fa-sliders-h"></i> Settings</button>
+  </div>
+  <div class="sidebar-footer">
+    <span><i class="fas fa-shield-alt"></i> v3.2</span>
+    <button class="dark-toggle" id="darkModeToggle"><i class="fas fa-moon"></i></button>
+  </div>
+</nav>
+
+<div class="main" id="mainContent">
+  <div class="top-bar">
+    <h2 id="pageTitle">📊 Dashboard</h2>
+    <div class="stats">
+      <span class="stat-chip"><i class="far fa-user"></i> <strong id="userCountLabel">0</strong> users</span>
+      <span class="stat-chip"><i class="far fa-clock"></i> <strong id="depositPendingCount">0</strong> pending</span>
+      <span class="stat-chip"><i class="fas fa-box"></i> <strong id="productTotalCount">0</strong> products</span>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tabDashboard" class="tab-content active">
+    <div class="grid-3">
+      <div class="card stat-card"><div class="icon stat-icon-blue"><i class="fas fa-users"></i></div><div class="number" id="dashUsers">0</div><div class="label">Total Users</div></div>
+      <div class="card stat-card"><div class="icon stat-icon-purple"><i class="fas fa-box"></i></div><div class="number" id="dashProducts">0</div><div class="label">Total Products</div></div>
+      <div class="card stat-card"><div class="icon stat-icon-teal"><i class="fas fa-coins"></i></div><div class="number" id="dashDeposits">0</div><div class="label">Total Deposits</div></div>
+      <div class="card stat-card"><div class="icon stat-icon-amber"><i class="fas fa-clock"></i></div><div class="number" id="dashPending">0</div><div class="label">Pending Deposits</div></div>
+      <div class="card stat-card"><div class="icon stat-icon-green"><i class="fas fa-check-circle"></i></div><div class="number" id="dashApproved">0</div><div class="label">Approved Deposits</div></div>
+      <div class="card stat-card"><div class="icon stat-icon-red"><i class="fas fa-chart-line"></i></div><div class="number" id="dashRevenue">৳0</div><div class="label">Total Revenue</div></div>
+    </div>
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><i class="fas fa-clock"></i> Recent Activity</div>
+      <div id="recentActivity"><div class="empty-state"><i class="fas fa-inbox"></i><br>No recent activity</div></div>
+    </div>
+  </div>
+
+  <!-- PRODUCTS -->
+  <div id="tabProducts" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-plus-circle"></i> <span id="productFormTitle">Add Product</span></div>
+        <form id="productForm">
+          <input type="hidden" id="editProductId">
+          <div class="input-group"><label>Product name</label><input type="text" id="pName" placeholder="e.g. AM DIGITAL SHOP Pro" required></div>
+          <div class="row-2">
+            <div class="input-group"><label>Price (BDT)</label><input type="number" id="pPrice" placeholder="499" step="0.01"></div>
+            <div class="input-group"><label>Version</label><input type="text" id="pVersion" placeholder="2.3.1"></div>
+          </div>
+          <div class="input-group"><label>Category</label><select id="pCategory"><option value="">Select Category</option></select></div>
+          <div class="input-group"><label>Image URL</label><input type="url" id="pImage" placeholder="https://..." oninput="previewProductImage()"></div>
+          <div id="productImagePreview"></div>
+          <div class="input-group"><label>Download URL</label><input type="url" id="pDownload" placeholder="https://..."></div>
+          <div class="input-group"><label>Demo URL (optional)</label><input type="url" id="pDemo" placeholder="https://demo..."></div>
+          <div class="input-group"><label>Order (lower = first)</label><input type="number" id="pOrder" placeholder="10" value="10"></div>
+          <div class="flex">
+            <button type="submit" class="btn"><i class="fas fa-save"></i> Save</button>
+            <button type="button" class="btn btn-outline btn-sm" id="clearProductForm"><i class="fas fa-undo"></i> Clear</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fas fa-list"></i> Products <span class="badge badge-primary" id="productCount">0</span></div>
+        <div class="search-box"><input type="text" id="productSearch" placeholder="Search products..." oninput="filterProducts()"></div>
+        <div class="scroll-list" id="productList"><div class="empty-state"><i class="fas fa-box-open"></i><br>No products</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEPOSITS -->
+  <div id="tabDeposits" class="tab-content">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-list-ul"></i> Deposit Requests <span class="badge badge-warning" id="depositPendingBadge">0</span>
+        <button class="btn btn-sm export-btn" style="margin-left:auto;" onclick="exportDeposits()"><i class="fas fa-file-export"></i> Export CSV</button>
+      </div>
+      <div class="search-box">
+        <input type="text" id="depositSearch" placeholder="Search by TrxID or User..." oninput="filterDeposits()">
+        <select id="depositStatusFilter" onchange="filterDeposits()">
+          <option value="all">All Status</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+      </div>
+      <div class="scroll-list" id="depositList"><div class="empty-state"><i class="fas fa-coins"></i><br>No deposits</div></div>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div id="tabUsers" class="tab-content">
+    <div class="card">
+      <div class="card-title"><i class="fas fa-users"></i> Registered Users <span class="badge badge-primary" id="userCountBadge">0</span>
+        <button class="btn btn-sm export-btn" style="margin-left:auto;" onclick="exportUsers()"><i class="fas fa-file-export"></i> Export CSV</button>
+      </div>
+      <div class="search-box"><input type="text" id="userSearch" placeholder="Search users..." oninput="filterUsers()"></div>
+      <div class="scroll-list" id="userList"><div class="empty-state"><i class="fas fa-user-slash"></i><br>No users</div></div>
+    </div>
+  </div>
+
+  <!-- CATEGORIES -->
+  <div id="tabCategories" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-plus"></i> Add Category</div>
+        <form id="categoryForm">
+          <input type="hidden" id="editCategoryId">
+          <div class="input-group"><label>Category Name</label><input type="text" id="catName" placeholder="e.g. Productivity" required></div>
+          <button type="submit" class="btn"><i class="fas fa-save"></i> Save Category</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fas fa-tags"></i> Categories <span class="badge badge-primary" id="categoryCount">0</span></div>
+        <div class="scroll-list" id="categoryList"><div class="empty-state">No categories</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDERS -->
+  <div id="tabSliders" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-plus"></i> Add Slide</div>
+        <form id="sliderForm">
+          <input type="hidden" id="editSliderId">
+          <div class="input-group"><label>Image URL</label><input type="url" id="slideImage" placeholder="https://..." required oninput="previewSlideImage()"></div>
+          <div id="slideImagePreview"></div>
+          <div class="input-group"><label>Title (optional)</label><input type="text" id="slideTitle" placeholder="Welcome"></div>
+          <div class="input-group"><label>Link (optional)</label><input type="url" id="slideLink" placeholder="https://..."></div>
+          <button type="submit" class="btn"><i class="fas fa-save"></i> Save Slide</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fas fa-images"></i> Slider List <span class="badge badge-primary" id="slideCount">0</span></div>
+        <div class="scroll-list" id="sliderList"><div class="empty-state">No slides</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTICES -->
+  <div id="tabNotices" class="tab-content">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title"><i class="fas fa-pen"></i> Publish Notice</div>
+        <form id="noticeForm">
+          <input type="hidden" id="editNoticeId">
+          <div class="input-group"><label>Title</label><input type="text" id="noticeTitle" placeholder="Important Update" required></div>
+          <div class="input-group"><label>Body / Message</label><textarea id="noticeBody" rows="3" placeholder="Details..."></textarea></div>
+          <button type="submit" class="btn"><i class="fas fa-paper-plane"></i> Publish</button>
+        </form>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fas fa-list"></i> Notices <span class="badge badge-primary" id="noticeCount">0</span></div>
+        <div class="scroll-list" id="noticeList"><div class="empty-state">No notices</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tabSettings" class="tab-content">
+    <div class="grid-2">
+      <div class="card"><div class="card-title"><i class="fas fa-phone"></i> Payment Numbers</div>
+        <div class="input-group"><label>bKash</label><input type="text" id="setBkash" placeholder="01XXXXXXXXX"></div>
+        <div class="input-group"><label>Nagad</label><input type="text" id="setNagad" placeholder="01XXXXXXXXX"></div>
+        <div class="input-group"><label>Rocket</label><input type="text" id="setRocket" placeholder="01XXXXXXXXX"></div>
+        <button class="btn" id="savePaymentNumbers"><i class="fas fa-save"></i> Save</button>
+      </div>
+      <div class="card"><div class="card-title"><i class="fas fa-link"></i> Links & Social</div>
+        <div class="input-group"><label>Support / Contact URL</label><input type="url" id="setSupport" placeholder="https://..."></div>
+        <div class="input-group"><label>Install / Download APK URL</label><input type="url" id="setInstall" placeholder="https://..."></div>
+        <div class="input-group"><label>YouTube tutorial</label><input type="url" id="setYoutube" placeholder="https://..."></div>
+        <div class="input-group"><label>Facebook tutorial</label><input type="url" id="setFacebook" placeholder="https://..."></div>
+        <button class="btn" id="saveLinks"><i class="fas fa-save"></i> Save</button>
+      </div>
+      <div class="card"><div class="card-title"><i class="fas fa-megaphone"></i> Popup Announcement</div>
+        <div class="input-group"><label>Image URL</label><input type="url" id="popupImage" placeholder="https://..." oninput="previewPopupImage()"></div>
+        <div id="popupImagePreview"></div>
+        <div class="input-group"><label>Title</label><input type="text" id="popupTitle" placeholder="Special Offer"></div>
+        <div class="input-group"><label>Description</label><textarea id="popupDesc" rows="2" placeholder="Details..."></textarea></div>
+        <div class="flex"><button class="btn" id="savePopup"><i class="fas fa-save"></i> Save</button><button class="btn btn-outline btn-sm" id="disablePopup"><i class="fas fa-ban"></i> Disable</button></div>
+      </div>
+      <div class="card"><div class="card-title"><i class="fas fa-cloud-upload-alt"></i> Force Update</div>
+        <div class="input-group"><label>Latest Version (e.g. 0.3)</label><input type="text" id="updateVersion" placeholder="0.3"></div>
+        <div class="input-group"><label>Download URL</label><input type="url" id="updateUrl" placeholder="https://..."></div>
+        <div class="input-group"><label>Notice message</label><input type="text" id="updateMsg" placeholder="New version available!"></div>
+        <button class="btn" id="saveUpdate"><i class="fas fa-save"></i> Save Update</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+</div>
+
+<div class="user-detail-modal" id="userDetailModal">
+  <div class="user-detail-box">
+    <button class="close" onclick="closeUserDetail()">&times;</button>
+    <h3 style="margin-bottom:18px; font-size: 18px;"><i class="fas fa-user-circle" style="color: var(--primary);"></i> User Details</h3>
+    <div id="userDetailContent"></div>
+  </div>
+</div>
+
+<div class="fab-container">
+  <button class="fab-btn" onclick="window.location.reload()" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+</div>
+
+<script>
+  // ============================================================
+  //  DEBUG LOGGER
+  // ============================================================
+  const DEBUG = true;
+  function log(...args) { if (DEBUG) console.log('🔍', ...args); }
+  function logErr(label, err) {
+    console.error(`❌ [${label}]`, err && err.code ? err.code : '', err && err.message ? err.message : err);
+    showDebugBanner(`${label}: ${(err && err.code) || ''} ${(err && err.message) || err}`);
+  }
+  function showDebugBanner(msg) {
+    const banner = document.getElementById('debugBanner');
+    document.getElementById('debugMsg').innerText = '⚠️ ' + msg;
+    banner.classList.add('show');
+  }
+
+  // ============================================================
+  //  FIREBASE INIT
+  // ============================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyAh9rfOe-gBbDOduiFVhyvLlpVVNOhGtVk",
+    authDomain: "am-digital-shop-53e57.firebaseapp.com",
+    databaseURL: "https://am-digital-shop-53e57-default-rtdb.firebaseio.com",
+    projectId: "am-digital-shop-53e57",
+    storageBucket: "am-digital-shop-53e57.firebasestorage.app",
+    messagingSenderId: "425024433515",
+    appId: "1:425024433515:web:c02b009d56c8666f56f02e",
+    measurementId: "G-57MFFKCRLS"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  log('Firebase ready. Project:', firebaseConfig.projectId);
+
+  // ============================================================
+  //  HELPERS
+  // ============================================================
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function showEmpty(el, msg = 'No items') {
+    el.innerHTML = `<div class="empty-state"><i class="fas fa-inbox"></i><br>${msg}</div>`;
+  }
+  function showError(el, msg) {
+    el.innerHTML = `<div class="empty-state" style="color:#dc2626;"><i class="fas fa-triangle-exclamation"></i><br>${msg}</div>`;
+  }
+  function setBadge(id, count) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.innerText = count;
+    el.classList.toggle('zero', !count || count === 0);
+  }
+
+  // ============================================================
+  //  DARK MODE
+  // ============================================================
+  document.getElementById('darkModeToggle').addEventListener('click', function () {
+    document.body.classList.toggle('dark');
+    const icon = this.querySelector('i');
+    icon.classList.toggle('fa-moon');
+    icon.classList.toggle('fa-sun');
+    localStorage.setItem('admin_dark', document.body.classList.contains('dark') ? '1' : '0');
+  });
+  if (localStorage.getItem('admin_dark') === '1') {
+    document.body.classList.add('dark');
+    const ic = document.querySelector('#darkModeToggle i');
+    ic.classList.remove('fa-moon'); ic.classList.add('fa-sun');
+  }
+
+  // ============================================================
+  //  SIDEBAR
+  // ============================================================
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  document.getElementById('sidebarToggle').addEventListener('click', () => {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('show');
+  });
+  overlay.addEventListener('click', () => {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  });
+
+  // ============================================================
+  //  TAB SWITCH
+  // ============================================================
+  document.querySelectorAll('.nav-item[data-tab]').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      const tabId = this.dataset.tab;
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      const titles = {
+        tabDashboard: '📊 Dashboard', tabProducts: '📦 Products', tabDeposits: '💰 Deposits',
+        tabUsers: '👥 Users', tabSliders: '🖼️ Sliders', tabNotices: '📢 Notices',
+        tabCategories: '🏷️ Categories', tabSettings: '⚙️ Settings'
+      };
+      document.getElementById('pageTitle').innerText = titles[tabId] || 'Dashboard';
+      if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+      }
+    });
+  });
+
+  // ============================================================
+  //  DASHBOARD
+  // ============================================================
+  function updateDashboard() {
+    db.collection('users').get().then(snap => {
+      const n = snap.size;
+      document.getElementById('dashUsers').innerText = n;
+      document.getElementById('userCountLabel').innerText = n;
+    }).catch(e => logErr('dash-users', e));
+
+    db.collection('products').get().then(snap => {
+      const n = snap.size;
+      document.getElementById('dashProducts').innerText = n;
+      document.getElementById('productTotalCount').innerText = n;
+    }).catch(e => logErr('dash-products', e));
+
+    db.collection('deposits').get().then(snap => {
+      let total = 0, pending = 0, approved = 0, revenue = 0;
+      snap.forEach(doc => {
+        const d = doc.data(); total++;
+        if (d.status === 'pending') pending++;
+        if (d.status === 'approved') { approved++; revenue += Number(d.amount) || 0; }
+      });
+      document.getElementById('dashDeposits').innerText = total;
+      document.getElementById('dashPending').innerText = pending;
+      document.getElementById('dashApproved').innerText = approved;
+      document.getElementById('dashRevenue').innerText = '৳' + revenue.toLocaleString();
+      document.getElementById('depositPendingCount').innerText = pending;
+    }).catch(e => logErr('dash-deposits', e));
+
+    // Recent activity — no orderBy to avoid index requirement
+    db.collection('deposits').get().then(snap => {
+      const container = document.getElementById('recentActivity');
+      if (snap.empty) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><br>No recent activity</div>';
+        return;
+      }
+      let list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => {
+        const ta = a.date && a.date.toMillis ? a.date.toMillis() : 0;
+        const tb = b.date && b.date.toMillis ? b.date.toMillis() : 0;
+        return tb - ta;
+      });
+      list = list.slice(0, 5);
+      let html = '';
+      list.forEach(d => {
+        const status = d.status || 'pending';
+        const emoji = status === 'approved' ? '✅' : status === 'rejected' ? '❌' : '⏳';
+        const color = status === 'approved' ? '#22c55e' : status === 'rejected' ? '#ef4444' : '#f59e0b';
+        const badgeCls = status === 'approved' ? 'badge-success' : status === 'rejected' ? 'badge-danger' : 'badge-warning';
+        let dateStr = 'just now';
+        try { if (d.date && d.date.toDate) dateStr = new Date(d.date.toDate()).toLocaleString(); } catch(_) {}
+        html += `<div class="list-item" style="border-left-color:${color};">
+          <div class="info">
+            <span class="title">${emoji} ${d.userName || 'User'} deposited ৳${d.amount}</span>
+            <span class="sub">${d.method || 'N/A'} · ${dateStr}</span>
+          </div>
+          <span class="badge ${badgeCls}" style="text-transform:capitalize;">${status}</span>
+        </div>`;
+      });
+      container.innerHTML = html;
+    }).catch(e => log('recent:', e.code));
+  }
+
+  // ============================================================
+  //  PRODUCTS
+  // ============================================================
+  const productListEl = document.getElementById('productList');
+  const productForm = document.getElementById('productForm');
+  document.getElementById('clearProductForm').addEventListener('click', () => {
+    productForm.reset();
+    document.getElementById('editProductId').value = '';
+    document.getElementById('productFormTitle').innerText = 'Add Product';
+    document.getElementById('productImagePreview').innerHTML = '';
+  });
+
+  function previewProductImage() {
+    const url = document.getElementById('pImage').value.trim();
+    const c = document.getElementById('productImagePreview');
+    c.innerHTML = url ? `<img src="${url}" class="img-preview" onerror="this.style.display='none'">` : '';
+  }
+
+  function renderProducts() {
+    db.collection('products').get().then(snap => {
+      if (snap.empty) {
+        showEmpty(productListEl, 'No products yet');
+        document.getElementById('productCount').innerText = '0';
+        setBadge('productCountBadge', 0);
+        document.getElementById('productTotalCount').innerText = '0';
+        return;
+      }
+      let list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => (a.order || 10) - (b.order || 10));
+      let html = '';
+      list.forEach(d => {
+        html += `<div class="list-item" data-name="${(d.name || '').toLowerCase()}">
+          <div class="info">
+            <span class="title">${d.name || 'Unnamed'}</span>
+            <span class="sub">৳${d.price || 0} · ${d.category || 'uncat'} · v${d.version || '1.0'}</span>
+          </div>
+          <div class="flex">
+            <button class="btn btn-outline btn-sm" onclick="editProduct('${d.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteProduct('${d.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>`;
+      });
+      productListEl.innerHTML = html;
+      const count = list.length;
+      document.getElementById('productCount').innerText = count;
+      setBadge('productCountBadge', count);
+      document.getElementById('productTotalCount').innerText = count;
+      log('Products loaded:', count);
+    }).catch(e => { logErr('renderProducts', e); showError(productListEl, 'Failed to load products'); });
+  }
+
+  window.filterProducts = function () {
+    const q = document.getElementById('productSearch').value.toLowerCase();
+    document.querySelectorAll('#productList .list-item').forEach(el => {
+      el.style.display = (el.dataset.name || '').includes(q) ? 'flex' : 'none';
+    });
+  };
+
+  productForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('editProductId').value;
+    const data = {
+      name: document.getElementById('pName').value.trim(),
+      price: parseFloat(document.getElementById('pPrice').value) || 0,
+      version: document.getElementById('pVersion').value.trim() || '1.0',
+      category: document.getElementById('pCategory').value,
+      image: document.getElementById('pImage').value.trim(),
+      downloadUrl: document.getElementById('pDownload').value.trim(),
+      demo: document.getElementById('pDemo').value.trim() || '',
+      order: parseInt(document.getElementById('pOrder').value) || 10,
+    };
+    if (!data.name) return toast('Product name required');
+    if (!data.category) return toast('Please select a category');
+    const ref = id ? db.collection('products').doc(id) : db.collection('products').doc();
+    ref.set(data, { merge: true }).then(() => {
+      toast(id ? 'Updated' : 'Added');
+      productForm.reset();
+      document.getElementById('editProductId').value = '';
+      document.getElementById('productFormTitle').innerText = 'Add Product';
+      document.getElementById('productImagePreview').innerHTML = '';
+      renderProducts();
+      updateDashboard();
+    }).catch(e => { logErr('saveProduct', e); toast('Error: ' + e.message); });
+  });
+
+  window.editProduct = function (id) {
+    db.collection('products').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      document.getElementById('editProductId').value = id;
+      document.getElementById('pName').value = d.name || '';
+      document.getElementById('pPrice').value = d.price || '';
+      document.getElementById('pVersion').value = d.version || '';
+      document.getElementById('pCategory').value = d.category || '';
+      document.getElementById('pImage').value = d.image || '';
+      document.getElementById('pDownload').value = d.downloadUrl || '';
+      document.getElementById('pDemo').value = d.demo || '';
+      document.getElementById('pOrder').value = d.order || 10;
+      document.getElementById('productFormTitle').innerText = 'Edit Product';
+      previewProductImage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }).catch(e => logErr('editProduct', e));
+  };
+  window.deleteProduct = function (id) {
+    if (!confirm('Delete this product?')) return;
+    db.collection('products').doc(id).delete().then(() => {
+      toast('Deleted'); renderProducts(); updateDashboard();
+    }).catch(e => logErr('deleteProduct', e));
+  };
+
+  // ============================================================
+  //  CATEGORIES
+  // ============================================================
+  const categoryListEl = document.getElementById('categoryList');
+  const categoryForm = document.getElementById('categoryForm');
+
+  function loadCategorySelect() {
+    const sel = document.getElementById('pCategory');
+    db.collection('categories').get().then(snap => {
+      const current = sel.value;
+      let opts = '<option value="">Select Category</option>';
+      let list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      list.forEach(d => { opts += `<option value="${d.name}">${d.name}</option>`; });
+      sel.innerHTML = opts;
+      if (current) sel.value = current;
+    }).catch(e => log('loadCategorySelect:', e.code));
+  }
+
+  function renderCategories() {
+    db.collection('categories').get().then(snap => {
+      if (snap.empty) { showEmpty(categoryListEl, 'No categories'); document.getElementById('categoryCount').innerText = '0'; return; }
+      let list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      let html = '';
+      list.forEach(d => {
+        html += `<div class="list-item">
+          <div class="info"><span class="title">${d.name}</span></div>
+          <div class="flex">
+            <button class="btn btn-outline btn-sm" onclick="editCategory('${d.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCategory('${d.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>`;
+      });
+      categoryListEl.innerHTML = html;
+      document.getElementById('categoryCount').innerText = list.length;
+    }).catch(e => logErr('renderCategories', e));
+  }
+
+  categoryForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('editCategoryId').value;
+    const name = document.getElementById('catName').value.trim();
+    if (!name) return toast('Category name required');
+    const ref = id ? db.collection('categories').doc(id) : db.collection('categories').doc();
+    ref.set({ name }).then(() => {
+      toast(id ? 'Updated' : 'Added');
+      categoryForm.reset();
+      document.getElementById('editCategoryId').value = '';
+      renderCategories(); loadCategorySelect();
+    }).catch(e => logErr('saveCategory', e));
+  });
+
+  window.editCategory = function (id) {
+    db.collection('categories').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      document.getElementById('editCategoryId').value = id;
+      document.getElementById('catName').value = doc.data().name || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+  window.deleteCategory = function (id) {
+    if (!confirm('Delete category?')) return;
+    db.collection('categories').doc(id).delete().then(() => { toast('Deleted'); renderCategories(); loadCategorySelect(); });
+  };
+
+  // ============================================================
+  //  DEPOSITS (FIXED — no orderBy, sorted client-side)
+  // ============================================================
+  let allDeposits = [];
+
+  function renderDeposits() {
+    log('renderDeposits started');
+    db.collection('deposits').get().then(snap => {
+      log('deposits snapshot:', { size: snap.size, empty: snap.empty });
+      allDeposits = [];
+      if (snap.empty) {
+        showEmpty(document.getElementById('depositList'), 'No deposits yet');
+        setBadge('depositPendingBadgeNav', 0);
+        document.getElementById('depositPendingBadge').innerText = '0';
+        document.getElementById('depositPendingCount').innerText = '0';
+        return;
+      }
+      snap.forEach(doc => allDeposits.push({ id: doc.id, ...doc.data() }));
+      allDeposits.sort((a, b) => {
+        const ta = a.date && a.date.toMillis ? a.date.toMillis() : 0;
+        const tb = b.date && b.date.toMillis ? b.date.toMillis() : 0;
+        return tb - ta;
+      });
+      filterDeposits();
+    }).catch(e => {
+      logErr('renderDeposits', e);
+      showError(document.getElementById('depositList'), 'Failed: ' + e.message);
+    });
+  }
+
+  window.filterDeposits = function () {
+    const q = (document.getElementById('depositSearch').value || '').toLowerCase();
+    const statusFilter = document.getElementById('depositStatusFilter').value;
+    const container = document.getElementById('depositList');
+    const filtered = allDeposits.filter(d => {
+      const matchSearch = (d.trxId || '').toLowerCase().includes(q) || (d.userName || '').toLowerCase().includes(q);
+      const matchStatus = statusFilter === 'all' || (d.status || 'pending') === statusFilter;
+      return matchSearch && matchStatus;
+    });
+    // Update pending count regardless of filter
+    const pendingAll = allDeposits.filter(d => (d.status || 'pending') === 'pending').length;
+    document.getElementById('depositPendingBadge').innerText = pendingAll;
+    setBadge('depositPendingBadgeNav', pendingAll);
+    document.getElementById('depositPendingCount').innerText = pendingAll;
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-search"></i><br>No matching deposits</div>';
+      return;
+    }
+    let html = '';
+    filtered.forEach(d => {
+      const status = d.status || 'pending';
+      const badgeCls = status === 'approved' ? 'badge-success' : status === 'rejected' ? 'badge-danger' : 'badge-warning';
+      const borderColor = status === 'approved' ? '#22c55e' : status === 'rejected' ? '#ef4444' : '#f59e0b';
+      let dateStr = 'just now';
+      try { if (d.date && d.date.toDate) dateStr = new Date(d.date.toDate()).toLocaleString(); } catch(_) {}
+      html += `<div class="list-item" style="border-left-color:${borderColor};">
+        <div class="info">
+          <span class="title">${d.userName || 'User'} · ৳${d.amount} (${d.method || 'N/A'})</span>
+          <span class="sub">Trx: ${d.trxId || 'N/A'} · ${dateStr}</span>
+        </div>
+        <div class="flex">
+          <span class="badge ${badgeCls}" style="text-transform:capitalize;">${status}</span>
+          ${status === 'pending' ? `
+            <button class="btn btn-success btn-sm" onclick="approveDeposit('${d.id}')"><i class="fas fa-check"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="rejectDeposit('${d.id}')"><i class="fas fa-times"></i></button>
+          ` : ''}
+        </div>
+      </div>`;
+    });
+    container.innerHTML = html;
+  };
+
+  window.approveDeposit = function (id) {
+    db.collection('deposits').doc(id).update({ status: 'approved' }).then(() => {
+      toast('Deposit approved');
+      db.collection('deposits').doc(id).get().then(doc => {
+        if (doc.exists) {
+          const d = doc.data();
+          if (d.userId && d.amount) {
+            db.collection('users').doc(d.userId).update({
+              balance: firebase.firestore.FieldValue.increment(Number(d.amount))
+            }).catch(e => log('balance update:', e.code));
+          }
+        }
+      });
+      renderDeposits(); updateDashboard();
+    }).catch(e => { logErr('approveDeposit', e); toast('Error: ' + e.message); });
+  };
+  window.rejectDeposit = function (id) {
+    if (!confirm('Reject this deposit?')) return;
+    db.collection('deposits').doc(id).update({ status: 'rejected' }).then(() => {
+      toast('Deposit rejected'); renderDeposits(); updateDashboard();
+    }).catch(e => logErr('rejectDeposit', e));
+  };
+
+  window.exportDeposits = function () {
+    let csv = 'User,Amount,Method,TrxID,Status,Date\n';
+    allDeposits.forEach(d => {
+      let dateStr = '';
+      try { if (d.date && d.date.toDate) dateStr = new Date(d.date.toDate()).toLocaleDateString(); } catch(_) {}
+      csv += `"${d.userName || 'User'}",${d.amount},"${d.method}","${d.trxId || ''}",${d.status || 'pending'},${dateStr}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'deposits.csv';
+    a.click();
+    toast('Exported successfully!');
+  };
+
+  // ============================================================
+  //  USERS (FIXED — count updates reliably)
+  // ============================================================
+  let allUsers = [];
+
+  function renderUsers() {
+    log('renderUsers started');
+    db.collection('users').get().then(snap => {
+      log('users snapshot:', { size: snap.size, empty: snap.empty });
+      allUsers = [];
+      if (snap.empty) {
+        showEmpty(document.getElementById('userList'), 'No users yet');
+        setBadge('userCountBadgeNav', 0);
+        document.getElementById('userCountBadge').innerText = '0';
+        document.getElementById('userCountLabel').innerText = '0';
+        document.getElementById('dashUsers').innerText = '0';
+        return;
+      }
+      snap.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+      allUsers.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      filterUsers();
+      const count = allUsers.length;
+      document.getElementById('userCountBadge').innerText = count;
+      setBadge('userCountBadgeNav', count);
+      document.getElementById('userCountLabel').innerText = count;
+      document.getElementById('dashUsers').innerText = count;
+      log('Users loaded:', count);
+    }).catch(e => {
+      logErr('renderUsers', e);
+      showError(document.getElementById('userList'), 'Failed: ' + e.message);
+    });
+  }
+
+  window.filterUsers = function () {
+    const q = (document.getElementById('userSearch').value || '').toLowerCase();
+    const container = document.getElementById('userList');
+    const filtered = allUsers.filter(u =>
+      (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
+    );
+    if (filtered.length === 0) {
+      container.innerHTML = '<div class="empty-state"><i class="fas fa-user-slash"></i><br>No matching users</div>';
+      return;
+    }
+    let html = '';
+    filtered.forEach(u => {
+      html += `<div class="user-list-item" onclick="showUserDetail('${u.id}')">
+        <div class="info">
+          <span class="name">${u.name || 'Unknown'}</span>
+          <span class="email">${u.email || 'no email'} · Balance: ৳${u.balance || 0}</span>
+        </div>
+        <span class="badge badge-primary"><i class="far fa-id-card"></i> ${u.id.slice(0, 6)}</span>
+      </div>`;
+    });
+    container.innerHTML = html;
+  };
+
+  window.showUserDetail = function (id) {
+    const user = allUsers.find(u => u.id === id);
+    if (!user) return;
+    const modal = document.getElementById('userDetailModal');
+    const content = document.getElementById('userDetailContent');
+    let joined = 'N/A';
+    try { if (user.createdAt && user.createdAt.toDate) joined = new Date(user.createdAt.toDate()).toLocaleDateString(); } catch(_) {}
+    content.innerHTML = `
+      <div class="detail-row"><span>Name</span><strong>${user.name || 'N/A'}</strong></div>
+      <div class="detail-row"><span>Email</span><strong>${user.email || 'N/A'}</strong></div>
+      <div class="detail-row"><span>Balance</span><strong>৳${user.balance || 0}</strong></div>
+      <div class="detail-row"><span>User ID</span><strong>${user.id}</strong></div>
+      <div class="detail-row"><span>Joined</span><strong>${joined}</strong></div>
+    `;
+    modal.classList.add('show');
+  };
+
+  window.closeUserDetail = function () {
+    document.getElementById('userDetailModal').classList.remove('show');
+  };
+  document.getElementById('userDetailModal').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('show');
+  });
+
+  window.exportUsers = function () {
+    let csv = 'Name,Email,Balance,UserID\n';
+    allUsers.forEach(u => {
+      csv += `"${u.name || 'Unknown'}","${u.email || ''}",${u.balance || 0},"${u.id}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'users.csv';
+    a.click();
+    toast('Exported successfully!');
+  };
+
+  // ============================================================
+  //  SLIDERS
+  // ============================================================
+  const sliderForm = document.getElementById('sliderForm');
+  const sliderListEl = document.getElementById('sliderList');
+  function previewSlideImage() {
+    const url = document.getElementById('slideImage').value.trim();
+    const c = document.getElementById('slideImagePreview');
+    c.innerHTML = url ? `<img src="${url}" class="img-preview" onerror="this.style.display='none'">` : '';
+  }
+  function renderSliders() {
+    db.collection('sliders').get().then(snap => {
+      if (snap.empty) { showEmpty(sliderListEl, 'No slides'); document.getElementById('slideCount').innerText = '0'; return; }
+      let html = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        html += `<div class="list-item">
+          <div class="info"><span class="title">${d.title || 'Slide'}</span><span class="sub">${d.image ? '✅ image set' : 'no image'}</span></div>
+          <div class="flex">
+            <button class="btn btn-outline btn-sm" onclick="editSlider('${doc.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteSlider('${doc.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>`;
+      });
+      sliderListEl.innerHTML = html;
+      document.getElementById('slideCount').innerText = snap.size;
+    }).catch(e => logErr('renderSliders', e));
+  }
+  sliderForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('editSliderId').value;
+    const data = {
+      image: document.getElementById('slideImage').value.trim(),
+      title: document.getElementById('slideTitle').value.trim(),
+      link: document.getElementById('slideLink').value.trim()
+    };
+    if (!data.image) return toast('Image required');
+    const ref = id ? db.collection('sliders').doc(id) : db.collection('sliders').doc();
+    ref.set(data, { merge: true }).then(() => {
+      toast(id ? 'Updated' : 'Added');
+      sliderForm.reset();
+      document.getElementById('editSliderId').value = '';
+      document.getElementById('slideImagePreview').innerHTML = '';
+      renderSliders();
+    }).catch(e => logErr('saveSlider', e));
+  });
+  window.editSlider = function (id) {
+    db.collection('sliders').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      document.getElementById('editSliderId').value = id;
+      document.getElementById('slideImage').value = d.image || '';
+      document.getElementById('slideTitle').value = d.title || '';
+      document.getElementById('slideLink').value = d.link || '';
+      previewSlideImage();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+  window.deleteSlider = function (id) {
+    if (!confirm('Delete slide?')) return;
+    db.collection('sliders').doc(id).delete().then(() => { toast('Deleted'); renderSliders(); });
+  };
+
+  // ============================================================
+  //  NOTICES (no orderBy — client-side sort)
+  // ============================================================
+  const noticeForm = document.getElementById('noticeForm');
+  const noticeListEl = document.getElementById('noticeList');
+  function renderNotices() {
+    db.collection('notices').get().then(snap => {
+      if (snap.empty) { showEmpty(noticeListEl, 'No notices'); document.getElementById('noticeCount').innerText = '0'; return; }
+      let list = [];
+      snap.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => {
+        const ta = a.date && a.date.toMillis ? a.date.toMillis() : 0;
+        const tb = b.date && b.date.toMillis ? b.date.toMillis() : 0;
+        return tb - ta;
+      });
+      let html = '';
+      list.forEach(d => {
+        html += `<div class="list-item">
+          <div class="info"><span class="title">${d.title || 'Notice'}</span><span class="sub">${d.body || d.message || ''}</span></div>
+          <div class="flex">
+            <button class="btn btn-outline btn-sm" onclick="editNotice('${d.id}')"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-danger btn-sm" onclick="deleteNotice('${d.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>`;
+      });
+      noticeListEl.innerHTML = html;
+      document.getElementById('noticeCount').innerText = list.length;
+    }).catch(e => logErr('renderNotices', e));
+  }
+  noticeForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const id = document.getElementById('editNoticeId').value;
+    const data = {
+      title: document.getElementById('noticeTitle').value.trim(),
+      body: document.getElementById('noticeBody').value.trim(),
+      date: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    if (!data.title) return toast('Title required');
+    const ref = id ? db.collection('notices').doc(id) : db.collection('notices').doc();
+    ref.set(data, { merge: true }).then(() => {
+      toast(id ? 'Updated' : 'Published');
+      noticeForm.reset();
+      document.getElementById('editNoticeId').value = '';
+      renderNotices();
+    }).catch(e => logErr('saveNotice', e));
+  });
+  window.editNotice = function (id) {
+    db.collection('notices').doc(id).get().then(doc => {
+      if (!doc.exists) return;
+      const d = doc.data();
+      document.getElementById('editNoticeId').value = id;
+      document.getElementById('noticeTitle').value = d.title || '';
+      document.getElementById('noticeBody').value = d.body || '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  };
+  window.deleteNotice = function (id) {
+    if (!confirm('Delete notice?')) return;
+    db.collection('notices').doc(id).delete().then(() => { toast('Deleted'); renderNotices(); });
+  };
+
+  // ============================================================
+  //  SETTINGS
+  // ============================================================
+  function previewPopupImage() {
+    const url = document.getElementById('popupImage').value.trim();
+    const c = document.getElementById('popupImagePreview');
+    c.innerHTML = url ? `<img src="${url}" class="img-preview" onerror="this.style.display='none'">` : '';
+  }
+  function loadSettings() {
+    db.collection('settings').doc('payment_numbers').get().then(doc => {
+      if (doc.exists) {
+        const d = doc.data();
+        document.getElementById('setBkash').value = d.bKash || '';
+        document.getElementById('setNagad').value = d.Nagad || '';
+        document.getElementById('setRocket').value = d.Rocket || '';
+      }
+    }).catch(e => log('settings payment:', e.code));
+    db.collection('settings').doc('support_info').get().then(doc => { if (doc.exists) document.getElementById('setSupport').value = doc.data().link || ''; }).catch(()=>{});
+    db.collection('settings').doc('social_links').get().then(doc => {
+      if (doc.exists) {
+        const d = doc.data();
+        document.getElementById('setYoutube').value = d.youtube || '';
+        document.getElementById('setFacebook').value = d.facebook || '';
+      }
+    }).catch(()=>{});
+    db.collection('settings').doc('popup_announcement').get().then(doc => {
+      if (doc.exists) {
+        const d = doc.data();
+        document.getElementById('setInstall').value = d.downloadUrl || '';
+        document.getElementById('popupImage').value = d.image || '';
+        document.getElementById('popupTitle').value = d.title || '';
+        document.getElementById('popupDesc').value = d.description || '';
+        previewPopupImage();
+      }
+    }).catch(()=>{});
+    db.collection('settings').doc('app_update').get().then(doc => {
+      if (doc.exists) {
+        const d = doc.data();
+        document.getElementById('updateVersion').value = d.version || '';
+        document.getElementById('updateUrl').value = d.downloadUrl || '';
+        document.getElementById('updateMsg').value = d.updateNotice || '';
+      }
+    }).catch(()=>{});
+  }
+  document.getElementById('savePaymentNumbers').addEventListener('click', () => {
+    const data = {
+      bKash: document.getElementById('setBkash').value.trim(),
+      Nagad: document.getElementById('setNagad').value.trim(),
+      Rocket: document.getElementById('setRocket').value.trim()
+    };
+    db.collection('settings').doc('payment_numbers').set(data, { merge: true }).then(() => toast('Saved')).catch(e => logErr('savePay', e));
+  });
+  document.getElementById('saveLinks').addEventListener('click', () => {
+    const support = document.getElementById('setSupport').value.trim();
+    const install = document.getElementById('setInstall').value.trim();
+    db.collection('settings').doc('support_info').set({ link: support }, { merge: true });
+    db.collection('settings').doc('popup_announcement').set({ downloadUrl: install }, { merge: true });
+    const youtube = document.getElementById('setYoutube').value.trim();
+    const facebook = document.getElementById('setFacebook').value.trim();
+    db.collection('settings').doc('social_links').set({ youtube, facebook }, { merge: true });
+    toast('Links saved');
+  });
+  document.getElementById('savePopup').addEventListener('click', () => {
+    db.collection('settings').doc('popup_announcement').set({
+      image: document.getElementById('popupImage').value.trim(),
+      title: document.getElementById('popupTitle').value.trim(),
+      description: document.getElementById('popupDesc').value.trim(),
+      active: true
+    }, { merge: true }).then(() => toast('Popup saved'));
+  });
+  document.getElementById('disablePopup').addEventListener('click', () => {
+    db.collection('settings').doc('popup_announcement').set({ active: false }, { merge: true }).then(() => toast('Popup disabled'));
+  });
+  document.getElementById('saveUpdate').addEventListener('click', () => {
+    db.collection('settings').doc('app_update').set({
+      version: document.getElementById('updateVersion').value.trim(),
+      downloadUrl: document.getElementById('updateUrl').value.trim(),
+      updateNotice: document.getElementById('updateMsg').value.trim()
+    }, { merge: true }).then(() => toast('Update saved'));
+  });
+
+  // ============================================================
+  //  INIT
+  // ============================================================
+  log('=== INIT START ===');
+  renderProducts();
+  renderDeposits();
+  renderUsers();
+  renderSliders();
+  renderNotices();
+  renderCategories();
+  loadCategorySelect();
+  loadSettings();
+  updateDashboard();
+
+  // Realtime listeners
+  db.collection('products').onSnapshot(() => { renderProducts(); updateDashboard(); }, err => logErr('snap-products', err));
+  db.collection('deposits').onSnapshot(() => { renderDeposits(); updateDashboard(); }, err => logErr('snap-deposits', err));
+  db.collection('users').onSnapshot(() => { renderUsers(); updateDashboard(); }, err => logErr('snap-users', err));
+  db.collection('sliders').onSnapshot(() => renderSliders(), err => log('snap-sliders:', err.code));
+  db.collection('notices').onSnapshot(() => renderNotices(), err => log('snap-notices:', err.code));
+  db.collection('categories').onSnapshot(() => { renderCategories(); loadCategorySelect(); }, err => log('snap-cats:', err.code));
+
+  log('=== INIT DONE ===');
+</script>
+</body>
+</html>
